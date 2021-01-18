@@ -142,10 +142,7 @@ def simulate_all(preset):
     contamination = preset['contamination']
     noise = preset['noise']
     extent = (preset['fov'],) * 2
-    folder = os.path.join(os.path.abspath('..'), 'data', preset_key)
-
-    Path(folder).mkdir(parents=True, exist_ok=True)
-
+    
     for prefix in ('train', 'test'):
 
         if prefix == 'train':

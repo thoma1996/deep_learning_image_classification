@@ -117,7 +117,7 @@ def add_noise(image, amount):
 
 
 presets = {'set_A':
-               {'num_examples': 8000,  # Total number of examples to simulate, the test set will be 10 % of these
+               {'num_examples': 4000,  # Total number of examples to simulate, the test set will be 10 % of these
                 'num_pixels': 48,  # Image size in pixels
                 'fov': 15,  # Field of view in Angstrom
                 'contamination': 0,  # Scale amount of mobile contaminants, realistic values in 0 to 100
@@ -126,7 +126,7 @@ presets = {'set_A':
                 'margin': 1.5 * 2.502,  # No vacancies within this distance of the image edge (in Angstrom)
                 },
            'set_B':
-               {'num_examples': 8000,
+               {'num_examples': 4000,
                 'num_pixels': 48,
                 'fov': 15,
                 'contamination': 0,
@@ -135,6 +135,59 @@ presets = {'set_A':
                 'margin': 1.5 * 2.502,
                 }
            }
+
+
+def simulate_all(preset):
+    shape = (preset['num_pixels'],) * 2
+    contamination = preset['contamination']
+    noise = preset['noise']
+    extent = (preset['fov'],) * 2
+    folder = os.path.join(os.path.abspath('..'), 'data', preset_key)
+
+    Path(folder).mkdir(parents=True, exist_ok=True)
+
+    for prefix in ('train', 'test'):
+
+        if prefix == 'train':
+            N = int(preset['num_examples'] * .9)
+        else:
+            N = preset['num_examples'] - int(preset['num_examples'] * .9)
+
+        images = np.zeros((N,) + shape, dtype=np.float32)
+        labels = np.zeros(N, dtype=np.int)
+
+        for i in tqdm(range(N)):
+            num_b_vacancies = np.random.poisson(.4)
+            num_n_vacancies = np.random.poisson(.4)
+
+            atoms = make_random_hbn_model(extent)
+
+            add_vacancy(atoms, num_b_vacancies, 5, preset['margin'])
+            add_vacancy(atoms, num_n_vacancies, 7, preset['margin'])
+
+            probe = make_probe()
+            image = simulate_2d_material(atoms, shape, probe, 1.6)
+
+            add_contamination(image, contamination)
+            add_noise(image, noise)
+
+            if (num_b_vacancies + num_n_vacancies) == 0:
+                label = 0
+            elif (num_b_vacancies == 1) & (num_n_vacancies == 0) & (preset['labels'] == 'detailed'):
+                label = 1
+            elif (num_b_vacancies == 0) & (num_n_vacancies == 1) & (preset['labels'] == 'detailed'):
+                label = 2
+            else:
+                if (preset['labels'] == 'detailed'):
+                    label = 3
+                else:
+                    label = 1
+
+            images[i] = ((image - image.mean()) / image.std()).astype(np.float32)
+            labels[i] = label
+
+    return images, labels
+
 
 if __name__ == '__main__':
 

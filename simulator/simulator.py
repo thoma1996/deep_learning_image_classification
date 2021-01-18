@@ -142,7 +142,7 @@ def simulate_all(preset):
     contamination = preset['contamination']
     noise = preset['noise']
     extent = (preset['fov'],) * 2
-    
+
     for prefix in ('train', 'test'):
 
         if prefix == 'train':
